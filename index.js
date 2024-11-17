@@ -1,4 +1,3 @@
-
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -18,7 +17,7 @@ app.post("/register", (req, res) => {
     const { userID, username } = req.body;
     const usersMoney = JSON.parse(fs.readFileSync(userMoneyFile, "utf8"));
 
-    if (usersMoney[userID] !== undefined) {
+    if (usersMoney[userID]) {
         return res.status(400).json({ error: "User already registered." });
     }
 
@@ -31,7 +30,7 @@ const updateUserBalance = (req, res, operation) => {
     const { userID, amount } = req.query;
     const usersMoney = JSON.parse(fs.readFileSync(userMoneyFile, "utf8"));
 
-    if (usersMoney[userID] === undefined) {
+    if (!usersMoney[userID]) {
         return res.status(400).json({ error: "User not found." });
     }
 
@@ -42,11 +41,10 @@ const updateUserBalance = (req, res, operation) => {
 
     if (operation === "add") {
         usersMoney[userID].balance += parsedAmount;
-    } else {
-        if (usersMoney[userID].balance < parsedAmount) {
-            return res.status(400).json({ error: "Insufficient funds." });
-        }
+    } else if (usersMoney[userID].balance >= parsedAmount) {
         usersMoney[userID].balance -= parsedAmount;
+    } else {
+        return res.status(400).json({ error: "Insufficient funds." });
     }
 
     fs.writeFileSync(userMoneyFile, JSON.stringify(usersMoney));
@@ -59,7 +57,7 @@ app.get("/deduct-money", (req, res) => updateUserBalance(req, res, "deduct"));
 app.get("/check-user", (req, res) => {
     const { userID } = req.query;
     const usersMoney = JSON.parse(fs.readFileSync(userMoneyFile, "utf8"));
-    const exists = usersMoney[userID] !== undefined;
+    const exists = Boolean(usersMoney[userID]);
     const balance = exists ? usersMoney[userID].balance : 0;
 
     res.json({ exists, balance });
